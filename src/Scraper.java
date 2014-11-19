@@ -20,6 +20,8 @@ public class Scraper {
   private WebResponse response;
   private String htmlTextFromDisc;
   private String onlyText;
+
+
   private static int k = 10;
   private static final int THRESH = 4;
   String[] naiveTxts;
@@ -29,7 +31,39 @@ public class Scraper {
   long startTime;
   long endTime;
 
+//
+//  PageGetter pageGetter = runScraping();
+//
+//  private PageGetter runScraping() {
+//    PageGetter pageGetter = skokScraper.run();
+//  }
+
+  ArrayList webLinks = new ArrayList();
+
   Scraper() throws IOException, SAXException {
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/Cesarz");
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/Gniezno");
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/W%C5%82adimir_Putin");
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/Steam");
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/Microsoft_Windows");
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/Counter-Strike");
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/Headshot");
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/YouTube");
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/Grand_Theft_Auto");
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/Wpierdol");
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/Nowa_Huta");
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/TVN");
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/Kalendarz_%C5%9Bwi%C4%85t_nietypowych");
+    webLinks.add("http://nonsensopedia.wikia.com/wiki/Smutny_Autobus");
+
+
+
+
+
+
+
+
+    setProxy();
     fetchPage();
     savePageToHtml();
     openHtmlPageFromDisc();
@@ -37,6 +71,20 @@ public class Scraper {
     savePageToTxt();
     sortElementsNaive();
     sortElementsUpggradedVersion();
+  }
+
+
+  public void setProxy() {
+    String proxyHost = "proxy.non.3dart.com";
+    String proxyPort = "3128";
+//    String proxyHost = "127.0.0.1"; // Burp
+//    String proxyPort = "8080";
+    /*String proxyHost = "127.0.0.1"; // Charles
+    String proxyPort = "8888";*/
+    System.setProperty("http.proxyHost", proxyHost);
+    System.setProperty("http.proxyPort", proxyPort);
+    System.setProperty("https.proxyHost", proxyHost);
+    System.setProperty("https.proxyPort", proxyPort);
   }
 
   private void fetchPage() throws IOException, SAXException {
