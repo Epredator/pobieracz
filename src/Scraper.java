@@ -16,63 +16,158 @@ import java.util.*;
  */
 
 public class Scraper {
-
+  private List<wordsCounter> webDocs = new ArrayList<>(); //this is dictionary of all unique words, sorted alphabetically
+  private List<String> totalWords = new ArrayList<String>();
+  private static String dictionaryWords;
   private WebResponse response;
-  private String htmlTextFromDisc;
-  private String onlyText;
+  private ArrayList<String> uniqueWordsDictionary = new ArrayList<String>();
+  private Map<String, Integer> sortedDictionaryUniqueWords;
+  private static int k = 0; //liczba slow uwzgledniona w rankingu
+  private static final int THRESH = 0;  //minimalna liczba wystapien
 
 
-  private static int k = 10;
-  private static final int THRESH = 4;
-  String[] naiveTxts;
-  String[] naiveTextRanking;
-  private Integer[] naiveNumberOfOccurences;
-  Map<String, Integer> naiveTextMap = new HashMap();
-  long startTime;
-  long endTime;
-
-//
-//  PageGetter pageGetter = runScraping();
-//
-//  private PageGetter runScraping() {
-//    PageGetter pageGetter = skokScraper.run();
-//  }
-
-  ArrayList webLinks = new ArrayList();
+  private List<String> webLinks = new ArrayList<String>();
 
   Scraper() throws IOException, SAXException {
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/Cesarz");
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/Gniezno");
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/W%C5%82adimir_Putin");
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/Steam");
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/Microsoft_Windows");
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/Counter-Strike");
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/Headshot");
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/YouTube");
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/Grand_Theft_Auto");
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/Wpierdol");
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/Nowa_Huta");
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/TVN");
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/Kalendarz_%C5%9Bwi%C4%85t_nietypowych");
-    webLinks.add("http://nonsensopedia.wikia.com/wiki/Smutny_Autobus");
-
-
-
-
-
-
-
-
-    setProxy();
-    fetchPage();
-    savePageToHtml();
-    openHtmlPageFromDisc();
-    convertHtmlPageToText();
-    savePageToTxt();
-    sortElementsNaive();
-    sortElementsUpggradedVersion();
+//    setProxy();
+    scrapeDocs();
+    makeDictionary();
+    countVectors();
   }
 
+  private void countVectors() {
+
+    for (wordsCounter doc : webDocs){
+      HashMap<String, Integer> uniqueCounter = doc.uniqueCounter;
+//      sortedDictionaryUniqueWords.
+
+    }
+  }
+
+  private void scrapeDocs() throws IOException, SAXException {
+    webLinks = Arrays.asList(
+        "http://pl.wikipedia.org/wiki/Koprofagia",     //zoologia
+        "http://pl.wikipedia.org/wiki/Brzuchorz%C4%99ski",
+        "http://pl.wikipedia.org/wiki/Pareczniki",
+        "http://pl.wikipedia.org/wiki/Stawonogi",
+        "http://pl.wikipedia.org/wiki/Borowik_szlachetny",
+//
+//        "http://pl.wikipedia.org/wiki/Antonio_Vivaldi",  //Muzyka poważna
+//        "http://pl.wikipedia.org/wiki/Fryderyk_Chopin",
+//        "http://pl.wikipedia.org/wiki/Piotr_Czajkowski",
+//        "http://pl.wikipedia.org/wiki/Georg_Friedrich_H%C3%A4ndel",
+//        "http://pl.wikipedia.org/wiki/Ludwig_van_Beethoven",
+//
+//        "http://pl.wikipedia.org/wiki/Linux",          //informatyka
+//        "http://pl.wikipedia.org/wiki/GNU",
+        "http://pl.wikipedia.org/wiki/Internet",
+        "http://pl.wikipedia.org/wiki/Java"
+//        "http://pl.wikipedia.org/wiki/Generator_liczb_pseudolosowych"
+    );
+
+
+    for (String link : webLinks) {
+      String htmlTextFromDisc = "";
+      fetchPage(link);
+      savePageToHtml(link);
+      htmlTextFromDisc = openHtmlPageFromDisc(link, htmlTextFromDisc);
+      String textDoc = convertHtmlPageToText(htmlTextFromDisc);
+      savePageToTxt(link, textDoc);
+
+      wordsCounter count = new wordsCounter(textDoc);
+      HashMap<String, Integer> docUniqueWords = count.getUniqueCounter();
+      uniqueWordsDictionary.addAll(count.getUniqueWords());
+      webDocs.add(count);
+      webLinks.size();
+      uniqueWordsDictionary.size();
+    }
+    webDocs.size();
+  }
+
+  private void makeDictionary() {
+    String text = uniqueWordsDictionary.toString();
+    wordsCounter count = new wordsCounter(text);
+    HashMap<String, Integer> dictionaryUniqueWords = count.getUniqueCounter();
+    sortedDictionaryUniqueWords = sortByKeys(dictionaryUniqueWords);
+    sortedDictionaryUniqueWords.size();
+  }
+
+
+  /*
+    * Paramterized method to sort Map e.g. HashMap or Hashtable in Java
+    * throw NullPointerException if Map contains null key
+    */
+  public static <K extends Comparable,V extends Comparable> Map<K,V> sortByKeys(Map<K,V> map){
+    List<K> keys = new LinkedList<K>(map.keySet());
+    Collections.sort(keys);
+
+    //LinkedHashMap will keep the keys in the order they are inserted
+    //which is currently sorted on natural ordering
+    Map<K,V> sortedMap = new LinkedHashMap<K,V>();
+    for(K key: keys){
+      sortedMap.put(key, map.get(key));
+    }
+
+    return sortedMap;
+  }
+
+
+
+  private void fetchPage(String link) throws IOException, SAXException {
+    WebConversation conversation = new WebConversation();
+    HttpUnitOptions.setScriptingEnabled(false);
+    String url = link;
+    System.out.println("visiting " + url);
+    WebRequest request = new GetMethodWebRequest(url);
+    response = conversation.getResponse(request);
+  }
+
+  private void savePageToHtml(String link) throws IOException {
+    String htmlPageToSave = response.getText();
+    FileWriter fw = new FileWriter("page" + onlyText(link) + ".html");
+    fw.write(htmlPageToSave);
+    fw.close();
+  }
+
+  private String openHtmlPageFromDisc(String link, String htmlTextFromDisc) throws IOException {
+    BufferedReader br = new BufferedReader(new FileReader("page" + onlyText(link) + ".html"));
+    String sCurrentLine;
+    while ((sCurrentLine = br.readLine()) != null)
+      htmlTextFromDisc += sCurrentLine;
+    return htmlTextFromDisc;
+  }
+
+  private String convertHtmlPageToText(String htmlTextFromDisc) {
+    Document doc = Jsoup.parse(htmlTextFromDisc.replaceFirst("null", ""));
+    String textAll = onlyText(doc.text());
+    return removeStopWords(textAll);
+  }
+
+  private String removeStopWords(String textAll) {
+    List<String> stopWords = new ArrayList<String>();
+    stopWords = Arrays.asList("w", "na", "u", "np", "gdy", "i", "z", "się", "nie", "się", "do", "to", "że", "jest", "o", "szukaj", "od", "bo", "po", "edytuj", "a", "ma", "dla");
+    for (String word : stopWords) {
+      textAll = textAll.replaceAll(" " + word + " ", " ");
+    }
+    return textAll;
+  }
+
+  private String onlyText(String text) {
+    return text.replaceAll("[^A-Za-zżźćńółęąśŻŹĆĄŚĘŁÓŃ\\s]*", "").toLowerCase();
+  }
+
+  private void savePageToTxt(String link, String textDoc) throws IOException {
+    FileWriter fw = new FileWriter("page" + onlyText(link) + ".html");
+    fw.write(textDoc);
+    fw.close();
+  }
+
+
+  private void countAllSplitedElements(String textDoc) {
+    String[] txts;
+    txts = textDoc.split(" ");
+    totalWords = Arrays.asList(txts);
+  }
 
   public void setProxy() {
     String proxyHost = "proxy.non.3dart.com";
@@ -85,146 +180,6 @@ public class Scraper {
     System.setProperty("http.proxyPort", proxyPort);
     System.setProperty("https.proxyHost", proxyHost);
     System.setProperty("https.proxyPort", proxyPort);
-  }
-
-  private void fetchPage() throws IOException, SAXException {
-    WebConversation conversation = new WebConversation();
-    HttpUnitOptions.setScriptingEnabled(false);
-    String url = "http://docs.oracle.com/javase/tutorial/index.html";
-    System.out.println("visiting " + url);
-    WebRequest request = new GetMethodWebRequest(url);
-    response = conversation.getResponse(request);
-  }
-
-  private void savePageToHtml() throws IOException {
-    String htmlPageToSave = response.getText();
-    FileWriter fw = new FileWriter("page.html");
-    fw.write(htmlPageToSave);
-    fw.close();
-  }
-
-  private void openHtmlPageFromDisc() throws IOException {
-    BufferedReader br = new BufferedReader(new FileReader("page.html"));
-    String sCurrentLine;
-    while ((sCurrentLine = br.readLine()) != null)
-      htmlTextFromDisc += sCurrentLine;
-  }
-
-  private void convertHtmlPageToText() {
-    Document doc = Jsoup.parse(htmlTextFromDisc.replaceFirst("null", ""));
-    onlyText = doc.text().replaceAll("[^A-Za-zżźćńółęąśŻŹĆĄŚĘŁÓŃ\\s]*", "").toLowerCase();
-  }
-
-  private void savePageToTxt() throws IOException {
-    FileWriter fw = new FileWriter("page.txt");
-    fw.write(onlyText);
-    fw.close();
-  }
-
-  private void sortElementsNaive() {
-    startTime = System.nanoTime();
-    countAllSplitedElements();
-    makeRanking();
-  }
-
-  private void sortElementsUpggradedVersion() {
-    startTime = System.nanoTime();
-    countAllSplitedElementsUpgradedVersion();
-    makeRanking();
-  }
-
-  private void countAllSplitedElements() {
-    naiveTxts = onlyText.split(" ");
-    naiveTextRanking = new String[naiveTxts.length];
-    naiveNumberOfOccurences = new Integer[naiveTxts.length];
-    for (int i = 1; i < naiveTxts.length; i++)
-      if (!naiveTxts[i].isEmpty())
-        for (int j = 1; j < naiveTextRanking.length; j++) {
-          if (naiveTextRanking[j] != null) {
-            if (naiveTextRanking[j].equals(naiveTxts[i])) {
-              naiveTextRanking[j] = naiveTxts[i];
-              naiveNumberOfOccurences[j] = naiveNumberOfOccurences[j].intValue() + 1;
-              break;
-            }
-          } else {
-            naiveTextRanking[j] = naiveTxts[i];
-            naiveNumberOfOccurences[j] = 1;
-            break;
-          }
-        }
-  }
-
-
-
-  private void countAllSplitedElementsUpgradedVersion() {
-    naiveTxts = onlyText.split(" ");
-    naiveTextRanking = new String[(int) Math.sqrt(naiveTxts.length)];
-    naiveNumberOfOccurences = new Integer[(int) Math.sqrt(naiveTxts.length)];
-    for (int i = 1; i < naiveTxts.length; i++)
-      if (!naiveTxts[i].isEmpty())
-        for (int j = 1; j < naiveTextRanking.length; j++) {
-          if (naiveTextRanking[j] != null) {
-            if (naiveTextRanking[j].equals(naiveTxts[i])) {
-              naiveTextRanking[j] = naiveTxts[i];
-              naiveNumberOfOccurences[j] = naiveNumberOfOccurences[j].intValue() + 1;
-              break;
-            }
-          } else {
-            naiveTextRanking[j] = naiveTxts[i];
-            naiveNumberOfOccurences[j] = 1;
-            break;
-          }
-        }
-  }
-
-  private void makeRanking() {
-   addSuitableElementsToMap();
-   printValues();
-  }
-
-
-  private void addSuitableElementsToMap() {
-    for (int i = 1; i < naiveNumberOfOccurences.length; i++)
-      if (naiveNumberOfOccurences[i] != null)
-        if (naiveNumberOfOccurences[i] > THRESH)
-          naiveTextMap.put(naiveTextRanking[i], naiveNumberOfOccurences[i]);
-  }
-
-  private void printValues() {
-    Map<String, Integer> map = sortByValues(naiveTextMap);
-    System.out.println("After sorting:");
-    Set set = map.entrySet();
-    Iterator iterator = set.iterator();
-    while (iterator.hasNext() ) {
-      Map.Entry me = (Map.Entry) iterator.next();
-      System.out.print(me.getKey() + ": ");
-      System.out.print(me.getValue() + "\n");
-    }
-    endTime = System.nanoTime();
-    System.out.println("Czas działania algorytmu: " + ( endTime - startTime) + " nanosekund");
-
-
-  }
-
-  private Map<String, Integer> sortByValues(Map<String, Integer> map) {
-    List list = new LinkedList(map.entrySet());
-    Collections.sort(list, new Comparator() {
-      public int compare(Object firstElem, Object secondElem) {
-        return ((Comparable) ((Map.Entry) (secondElem)).getValue())
-            .compareTo(((Map.Entry) (firstElem)).getValue());
-      }
-    });
-
-    HashMap sortedHashMap = new LinkedHashMap();
-    int i = 0;
-    for (Iterator it = list.iterator(); it.hasNext(); ) {
-      Map.Entry entry = (Map.Entry) it.next();
-      if (i<k) {
-        sortedHashMap.put(entry.getKey(), entry.getValue());
-        i++;
-      }
-    }
-    return sortedHashMap;
   }
 
 
