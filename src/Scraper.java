@@ -16,31 +16,96 @@ import java.util.*;
  */
 
 public class Scraper {
-  private List<wordsCounter> webDocs = new ArrayList<>(); //this is dictionary of all unique words, sorted alphabetically
+  private List<wordsDocument> webDocs = new ArrayList<>(); //this is dictionary of all unique words, sorted alphabetically
   private List<String> totalWords = new ArrayList<String>();
-  private static String dictionaryWords;
   private WebResponse response;
   private ArrayList<String> uniqueWordsDictionary = new ArrayList<String>();
   private Map<String, Integer> sortedDictionaryUniqueWords;
-  private static int k = 0; //liczba slow uwzgledniona w rankingu
-  private static final int THRESH = 0;  //minimalna liczba wystapien
-
-
+  private int dictionarySize;
+  private String dictionaryAllWords = "";
   private List<String> webLinks = new ArrayList<String>();
+  private Map<Double, String> intervals = new HashMap<Double, String>();
 
   Scraper() throws IOException, SAXException {
 //    setProxy();
     scrapeDocs();
     makeDictionary();
-    countVectors();
+    powVectors();
+    countVectorsModulo();
+    countCosinus();
+    printWeakestResult();
+    printStrongestResult();
   }
 
-  private void countVectors() {
+  private void printStrongestResult() {
+    Map<Double, String> ascSortedMap = new TreeMap<Double, String>();
+    ascSortedMap.putAll(intervals);
+    System.out.println("10 najbardziej podobnych dokumentów: ");
+    int i = 0;
+    for (Map.Entry<Double, String> entry : ascSortedMap.entrySet()) {
+      i++;
+      if (i > intervals.size() - 11)
+        System.out.println(10 - (intervals.size() - i) + ". " + "Wartości miary cosinusowej : " + entry.getKey() + " Dla pary dokumentów : "
+            + entry.getValue());
+    }
+  }
 
-    for (wordsCounter doc : webDocs){
+  private void printWeakestResult() {
+    Map<Double, String> ascSortedMap = new TreeMap<Double, String>();
+    ascSortedMap.putAll(intervals);
+    System.out.println("10 najmniej podobnych dokumentów: ");
+    int i = 0;
+    for (Map.Entry<Double, String> entry : ascSortedMap.entrySet()) {
+      i++;
+      if (i < 11)
+        System.out.println(i + ". " + "Wartości miary cosinusowej : " + entry.getKey() + " Dla pary dokumentów : "
+            + entry.getValue());
+    }
+  }
+
+
+  private void countCosinus() {
+    for (wordsDocument doc : webDocs)
+      for (wordsDocument otherDoc : webDocs)
+        if (doc != otherDoc) {
+          Map<Integer, Integer> converslyDocComparer = new HashMap<Integer, Integer>();
+          converslyDocComparer.put(otherDoc.docName, doc.docName);
+          if (intervals.containsValue(converslyDocComparer) == false) {
+            double matrixsMultiplication = multiplicateMatrixes(doc, otherDoc);
+            double aaa = (doc.modVector * otherDoc.modVector);
+            double cos = matrixsMultiplication / (aaa);
+            Map<Integer, Integer> docsComparer = new HashMap<Integer, Integer>();
+            docsComparer.put(doc.docName, otherDoc.docName);
+            intervals.put(cos, docsComparer.toString());
+          }
+        }
+
+  }
+
+  private double multiplicateMatrixes(wordsDocument doc, wordsDocument otherDoc) {
+    double matrixsMultiplication = 0;
+    for (int i = 0; i < doc.vectors.length; i++)
+      matrixsMultiplication += doc.vectors[i] * otherDoc.vectors[i];
+    return matrixsMultiplication;
+  }
+
+  private void powVectors() {
+    for (wordsDocument doc : webDocs) {
       HashMap<String, Integer> uniqueCounter = doc.uniqueCounter;
-//      sortedDictionaryUniqueWords.
-
+      doc.vectors = new double[dictionarySize];
+      int i = 0;
+      for (String dictionaryKey : sortedDictionaryUniqueWords.keySet()) {
+        for (String uniqueWord : doc.uniqueWords) {
+          if (dictionaryKey.equals(uniqueWord)) {
+            doc.vectors[i] = (double) uniqueCounter.get(dictionaryKey) / (double) uniqueCounter.size();
+            break;
+          } else {
+            if (doc.vectors[i] == 0)
+              doc.vectors[i] = (double) 0;
+          }
+        }
+        i++;
+      }
     }
   }
 
@@ -51,21 +116,21 @@ public class Scraper {
         "http://pl.wikipedia.org/wiki/Pareczniki",
         "http://pl.wikipedia.org/wiki/Stawonogi",
         "http://pl.wikipedia.org/wiki/Borowik_szlachetny",
-//
-//        "http://pl.wikipedia.org/wiki/Antonio_Vivaldi",  //Muzyka poważna
-//        "http://pl.wikipedia.org/wiki/Fryderyk_Chopin",
-//        "http://pl.wikipedia.org/wiki/Piotr_Czajkowski",
-//        "http://pl.wikipedia.org/wiki/Georg_Friedrich_H%C3%A4ndel",
-//        "http://pl.wikipedia.org/wiki/Ludwig_van_Beethoven",
-//
-//        "http://pl.wikipedia.org/wiki/Linux",          //informatyka
-//        "http://pl.wikipedia.org/wiki/GNU",
+
+        "http://pl.wikipedia.org/wiki/Antonio_Vivaldi",  //Muzyka poważna
+        "http://pl.wikipedia.org/wiki/Fryderyk_Chopin",
+        "http://pl.wikipedia.org/wiki/Piotr_Czajkowski",
+        "http://pl.wikipedia.org/wiki/Georg_Friedrich_H%C3%A4ndel",
+        "http://pl.wikipedia.org/wiki/Ludwig_van_Beethoven",
+
+        "http://pl.wikipedia.org/wiki/Linux",          //informatyka
+        "http://pl.wikipedia.org/wiki/GNU",
         "http://pl.wikipedia.org/wiki/Internet",
-        "http://pl.wikipedia.org/wiki/Java"
-//        "http://pl.wikipedia.org/wiki/Generator_liczb_pseudolosowych"
+        "http://pl.wikipedia.org/wiki/Java",
+        "http://pl.wikipedia.org/wiki/Generator_liczb_pseudolosowych"
     );
 
-
+    int counter = 0;
     for (String link : webLinks) {
       String htmlTextFromDisc = "";
       fetchPage(link);
@@ -73,23 +138,34 @@ public class Scraper {
       htmlTextFromDisc = openHtmlPageFromDisc(link, htmlTextFromDisc);
       String textDoc = convertHtmlPageToText(htmlTextFromDisc);
       savePageToTxt(link, textDoc);
-
-      wordsCounter count = new wordsCounter(textDoc);
+      wordsDocument count = new wordsDocument(textDoc);
+      dictionaryAllWords += textDoc;
       HashMap<String, Integer> docUniqueWords = count.getUniqueCounter();
-      uniqueWordsDictionary.addAll(count.getUniqueWords());
+      count.docName = counter++;
       webDocs.add(count);
       webLinks.size();
       uniqueWordsDictionary.size();
     }
-    webDocs.size();
+  }
+
+  private void countVectorsModulo() {
+    for (wordsDocument doc : webDocs) {
+      doc.powVectors = new double[dictionarySize];
+      for (int i = 0; i < doc.powVectors.length; i++)
+        doc.powVectors[i] = Math.pow(doc.vectors[i], 2);
+      double allNumbers = 0;
+      for (int i = 0; i < doc.powVectors.length; i++)
+        allNumbers += doc.powVectors[i];
+      doc.modVector = Math.sqrt(allNumbers);
+    }
   }
 
   private void makeDictionary() {
-    String text = uniqueWordsDictionary.toString();
-    wordsCounter count = new wordsCounter(text);
+    String text = dictionaryAllWords.toString();
+    wordsDocument count = new wordsDocument(text);
     HashMap<String, Integer> dictionaryUniqueWords = count.getUniqueCounter();
     sortedDictionaryUniqueWords = sortByKeys(dictionaryUniqueWords);
-    sortedDictionaryUniqueWords.size();
+    dictionarySize = sortedDictionaryUniqueWords.size();
   }
 
 
@@ -97,27 +173,24 @@ public class Scraper {
     * Paramterized method to sort Map e.g. HashMap or Hashtable in Java
     * throw NullPointerException if Map contains null key
     */
-  public static <K extends Comparable,V extends Comparable> Map<K,V> sortByKeys(Map<K,V> map){
+  public static <K extends Comparable, V extends Comparable> Map<K, V> sortByKeys(Map<K, V> map) {
     List<K> keys = new LinkedList<K>(map.keySet());
     Collections.sort(keys);
 
     //LinkedHashMap will keep the keys in the order they are inserted
     //which is currently sorted on natural ordering
-    Map<K,V> sortedMap = new LinkedHashMap<K,V>();
-    for(K key: keys){
+    Map<K, V> sortedMap = new LinkedHashMap<K, V>();
+    for (K key : keys)
       sortedMap.put(key, map.get(key));
-    }
-
     return sortedMap;
   }
-
 
 
   private void fetchPage(String link) throws IOException, SAXException {
     WebConversation conversation = new WebConversation();
     HttpUnitOptions.setScriptingEnabled(false);
     String url = link;
-    System.out.println("visiting " + url);
+    System.out.println("odwiedzam " + url);
     WebRequest request = new GetMethodWebRequest(url);
     response = conversation.getResponse(request);
   }
@@ -160,13 +233,6 @@ public class Scraper {
     FileWriter fw = new FileWriter("page" + onlyText(link) + ".html");
     fw.write(textDoc);
     fw.close();
-  }
-
-
-  private void countAllSplitedElements(String textDoc) {
-    String[] txts;
-    txts = textDoc.split(" ");
-    totalWords = Arrays.asList(txts);
   }
 
   public void setProxy() {
