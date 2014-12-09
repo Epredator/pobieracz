@@ -11,32 +11,31 @@ import java.util.*;
 
 public class zadanie4analizaHiperlaczy {
 
-  private static final String BASE_URL = "http://kontomierz.pl/";
+  private static final String BASE_URL = "http://httpunit.sourceforge.net/";
   private WebResponse response;
   private List<String> webLinks = new ArrayList<String>();
   private final static int IMMERSION = 2;
+  private List<String> otherHrefs = new ArrayList<String>();
+  List<String> hrefs = new ArrayList<String>();
 
   zadanie4analizaHiperlaczy() throws IOException, SAXException {
-    List<String> links = new ArrayList<String>();
     webLinks = Arrays.asList(
         BASE_URL
     );
 
-    for (int i = 0; i<4; i++) {
-      webLinks = scrapeDoc(webLinks);
+    webLinks = scrapeDoc(webLinks);
+    for (int i = 0; i<2; i++) {
       scrapeDoc(webLinks);
     }
   }
 
   private List<String> scrapeDoc(List<String> webLinks) throws IOException, SAXException {
-    List<String> temporaryLinks = new ArrayList<String>();
-    List<String> hrefs = new ArrayList<String>();
     for(String link : webLinks) {
       fetchPage(link);
-//      List<String> hrefs = new ArrayList<String>();
-      hrefs = getWebLinks(hrefs);
+      getWebLinks(hrefs);
 
-      saveLinksOnDisc(link, hrefs);
+      saveLinksOnDisc("wewnetrzne", hrefs);
+      saveLinksOnDisc("zawnetrzne linki", otherHrefs);
     }
     return hrefs;
   }
@@ -59,16 +58,16 @@ public class zadanie4analizaHiperlaczy {
         if (!(href.contains("http")))
           hrefs.add(BASE_URL + href);
         else
-          hrefs.add(href);
+          otherHrefs.add(href);
 //          System.out.println(BASE_URL + href);
       }
     }
     return hrefs;
   }
 
-  private void saveLinksOnDisc(String link, List<String> hrefs) throws IOException {
+  private void saveLinksOnDisc(String name, List<String> hrefs) throws IOException {
     String htmlPageToSave = hrefs.toString();
-    FileWriter fw = new FileWriter("page" + onlyText("plik") + ".txt");
+    FileWriter fw = new FileWriter("page" + onlyText(name) + ".txt");
     fw.write(htmlPageToSave);
     fw.close();
   }
