@@ -64,6 +64,7 @@ public class zadanie3porownanieDokumentow {
 
 
   private void countCosinus() {
+    int z =0;
     for (wordsDocument doc : webDocs)
       for (wordsDocument otherDoc : webDocs)
         if (doc != otherDoc) {
@@ -77,7 +78,9 @@ public class zadanie3porownanieDokumentow {
             docsComparer.put(doc.docName, otherDoc.docName);
             intervals.put(cos, docsComparer.toString());
           }
+
         }
+    System.out.println(intervals.size());
 
   }
 
@@ -93,6 +96,7 @@ public class zadanie3porownanieDokumentow {
       HashMap<String, Integer> uniqueCounter = doc.uniqueCounter;
       doc.vectors = new double[dictionarySize];
       int i = 0;
+      int z = 0;
       for (String dictionaryKey : sortedDictionaryUniqueWords.keySet()) {
         for (String uniqueWord : doc.uniqueWords) {
           if (dictionaryKey.equals(uniqueWord)) {
